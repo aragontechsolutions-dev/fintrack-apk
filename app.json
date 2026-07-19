@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "FinTrack",
+    "slug": "fintrack",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": false,
+    "scheme": "fintrack",
+    "android": {
+      "package": "com.aragontech.fintrack",
+      "versionCode": 1,
+      "permissions": [
+        "USE_BIOMETRIC",
+        "USE_FINGERPRINT"
+      ]
+    },
+    "ios": {
+      "bundleIdentifier": "com.aragontech.fintrack",
+      "supportsTablet": true
+    },
+    "plugins": [
+      [
+        "expo-sqlite",
+        {
+          "useSQLCipher": true
+        }
+      ],
+      [
+        "expo-secure-store",
+        {
+          "faceIDPermission": "Permitir a FinTrack usar autenticación biométrica para desbloquear tus datos."
+        }
+      ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Permitir a FinTrack usar autenticación biométrica para desbloquear tus datos."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": ""
+      }
+    }
+  }
+}
