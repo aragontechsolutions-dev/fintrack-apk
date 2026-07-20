@@ -5,7 +5,13 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 import { useSession } from '../../auth/AuthContext';
 import { Button, Card } from '../../components/ui';
-import { BarDatum, BarList, ColumnDatum, MonthlyColumns } from '../../components/charts';
+import {
+  BarDatum,
+  BarList,
+  ColumnDatum,
+  MonthlyColumns,
+  ProgressBar,
+} from '../../components/charts';
 import { formatMoney } from '../../money/money';
 import { monthRange } from '../../utils/date';
 import { MainStackParamList } from '../../navigation/types';
@@ -18,6 +24,11 @@ const CATEGORY_COLORS = [
   '#00838F', '#AD1457', '#2E7D32', '#4E342E', '#455A64',
 ];
 
+const INCOME_COLORS = [
+  '#2E7D32', '#388E3C', '#43A047', '#00897B', '#00838F',
+  '#558B2F', '#7CB342', '#1B5E20', '#26A69A', '#66BB6A',
+];
+
 export function ReportsScreen() {
   const navigation = useNavigation<Nav>();
   const { session, repos } = useSession();
@@ -25,7 +36,11 @@ export function ReportsScreen() {
 
   const [month, setMonth] = useState({ incomeBaseMinor: 0, expenseBaseMinor: 0 });
   const [bars, setBars] = useState<BarDatum[]>([]);
+  const [incomeBars, setIncomeBars] = useState<BarDatum[]>([]);
   const [columns, setColumns] = useState<ColumnDatum[]>([]);
+  const [trend, setTrend] = useState<
+    { label: string; rate: number | null; netMinor: number }[]
+  >([]);
 
   const load = useCallback(async () => {
     const current = monthRange(0);
@@ -49,8 +64,25 @@ export function ReportsScreen() {
         })),
     );
 
-    // Last 6 months income vs expense.
+    // Income by category (current month).
+    const income = await repos.transactions.categoryIncomeBetween(
+      current.from,
+      current.to,
+    );
+    setIncomeBars(
+      income
+        .filter((s) => s.totalBaseMinor > 0)
+        .map((s, i) => ({
+          key: s.categoryId ?? 'none',
+          label: s.categoryId ? nameById.get(s.categoryId) ?? 'Categoría' : 'Sin categoría',
+          valueMinor: s.totalBaseMinor,
+          color: INCOME_COLORS[i % INCOME_COLORS.length],
+        })),
+    );
+
+    // Last 6 months income vs expense + savings rate trend.
     const cols: ColumnDatum[] = [];
+    const tr: { label: string; rate: number | null; netMinor: number }[] = [];
     for (let i = 5; i >= 0; i--) {
       const r = monthRange(i);
       const t = await repos.transactions.totalsBetween(r.from, r.to);
@@ -59,8 +91,15 @@ export function ReportsScreen() {
         incomeMinor: t.incomeBaseMinor,
         expenseMinor: t.expenseBaseMinor,
       });
+      const net = t.incomeBaseMinor - t.expenseBaseMinor;
+      tr.push({
+        label: r.label,
+        netMinor: net,
+        rate: t.incomeBaseMinor > 0 ? net / t.incomeBaseMinor : null,
+      });
     }
     setColumns(cols);
+    setTrend(tr);
   }, [repos]);
 
   useFocusEffect(
@@ -70,6 +109,8 @@ export function ReportsScreen() {
   );
 
   const net = month.incomeBaseMinor - month.expenseBaseMinor;
+  const savingsRate =
+    month.incomeBaseMinor > 0 ? net / month.incomeBaseMinor : null;
 
   return (
     <ScrollView
@@ -96,6 +137,24 @@ export function ReportsScreen() {
         <Text style={[styles.val, { color: net >= 0 ? colors.income : colors.expense }]}>
           {formatMoney(net, base)}
         </Text>
+        {savingsRate !== null ? (
+          <Text style={styles.rate}>
+            Tasa de ahorro:{' '}
+            <Text style={{ color: savingsRate >= 0 ? colors.income : colors.expense, fontWeight: '700' }}>
+              {Math.round(savingsRate * 100)}%
+            </Text>{' '}
+            de tus ingresos
+          </Text>
+        ) : null}
+      </Card>
+
+      <Text style={styles.section}>Ingresos por categoría (este mes)</Text>
+      <Card>
+        {incomeBars.length === 0 ? (
+          <Text style={styles.muted}>Sin ingresos este mes.</Text>
+        ) : (
+          <BarList data={incomeBars} currency={base} />
+        )}
       </Card>
 
       <Text style={styles.section}>Gastos por categoría (este mes)</Text>
@@ -110,6 +169,33 @@ export function ReportsScreen() {
       <Text style={styles.section}>Ingresos vs gastos (6 meses)</Text>
       <Card>
         <MonthlyColumns data={columns} currency={base} />
+      </Card>
+
+      <Text style={styles.section}>Tasa de ahorro (6 meses)</Text>
+      <Card>
+        {trend.every((t) => t.rate === null) ? (
+          <Text style={styles.muted}>Sin ingresos registrados aún.</Text>
+        ) : (
+          trend.map((t) => (
+            <View key={t.label} style={styles.trendRow}>
+              <View style={styles.trendHeader}>
+                <Text style={styles.trendLabel}>{t.label}</Text>
+                <Text
+                  style={[
+                    styles.trendRate,
+                    { color: (t.rate ?? 0) >= 0 ? colors.income : colors.expense },
+                  ]}
+                >
+                  {t.rate === null ? '—' : `${Math.round(t.rate * 100)}%`}
+                </Text>
+              </View>
+              <ProgressBar
+                ratio={t.rate ?? 0}
+                color={(t.rate ?? 0) >= 0 ? colors.income : colors.expense}
+              />
+            </View>
+          ))
+        )}
       </Card>
 
       <Button
@@ -128,6 +214,15 @@ const styles = StyleSheet.create({
   cell: { flex: 1 },
   small: { fontSize: font.sm, color: colors.textMuted },
   val: { fontSize: font.lg, fontWeight: '700', marginTop: 2 },
+  rate: { fontSize: font.sm, color: colors.textMuted, marginTop: spacing.sm },
+  trendRow: { marginBottom: spacing.md },
+  trendHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: spacing.xs,
+  },
+  trendLabel: { fontSize: font.sm, color: colors.text },
+  trendRate: { fontSize: font.sm, fontWeight: '700' },
   section: {
     fontSize: font.lg,
     fontWeight: '700',

@@ -35,8 +35,9 @@ el control de acceso local.
 - **Ahorro**: metas y sobres con progreso, aportes y proyección de cumplimiento.
 - **Presupuestos**: límite mensual por categoría con gasto consumido y alerta de
   exceso.
-- **Reportes**: gastos por categoría, ingresos vs. gastos de los últimos 6
-  meses (gráficos basados en Views, sin dependencias nativas de charts).
+- **Reportes**: ingresos y gastos por categoría, ingresos vs. gastos de los
+  últimos 6 meses, y **tasa de ahorro** del mes y su tendencia (gráficos basados
+  en Views, sin dependencias nativas de charts).
 - **Seguridad**: base cifrada con SQLCipher, clave protegida por
   key-wrapping (Argon2id + AES-256-GCM), auto-logout por inactividad, bloqueo
   al pasar a segundo plano y bloqueo de capturas de pantalla.

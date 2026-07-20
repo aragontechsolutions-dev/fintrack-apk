@@ -326,6 +326,29 @@ export function createRepositories(db: Database, userId: string) {
         .orderBy(desc(sql`coalesce(sum(${transactions.amountBaseMinor}), 0)`));
     },
 
+    /** Income totals (base minor) grouped by category, in [fromISO, toISO). */
+    async categoryIncomeBetween(
+      fromISO: string,
+      toISO: string,
+    ): Promise<{ categoryId: string | null; totalBaseMinor: number }[]> {
+      return db
+        .select({
+          categoryId: transactions.categoryId,
+          totalBaseMinor: sql<number>`coalesce(sum(${transactions.amountBaseMinor}), 0)`,
+        })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.userId, userId),
+            eq(transactions.type, 'income'),
+            gte(transactions.date, fromISO),
+            lt(transactions.date, toISO),
+          ),
+        )
+        .groupBy(transactions.categoryId)
+        .orderBy(desc(sql`coalesce(sum(${transactions.amountBaseMinor}), 0)`));
+    },
+
     /** Total expense (base minor) for one category in [fromISO, toISO). */
     async categoryExpenseBetween(
       categoryId: string,
