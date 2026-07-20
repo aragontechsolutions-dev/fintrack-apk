@@ -1,5 +1,5 @@
-// Polyfill for crypto.getRandomValues, required by react-native-quick-crypto and
-// any WebCrypto-style consumer. Must be imported before anything that uses it.
+// Polyfill for crypto.getRandomValues for any WebCrypto-style consumer.
+// Must be imported before anything that might use it.
 import 'react-native-get-random-values';
 import 'react-native-gesture-handler';
 

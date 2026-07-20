@@ -1,18 +1,23 @@
 /**
  * AES-256-GCM authenticated encryption.
  *
- * Backed by `react-native-quick-crypto`, which exposes the Node `crypto` API
- * on top of a fast native (JSI) implementation. GCM provides confidentiality
- * AND integrity: decryption fails (throws) if the ciphertext or tag was
- * tampered with, which is exactly what we want for wrapped keys and backups.
+ * Backed by `@noble/ciphers` — a pure-JavaScript, audited implementation. We
+ * deliberately avoid a native OpenSSL-backed library (react-native-quick-crypto)
+ * because it ships its own `libcrypto.so`, which collides at build time with the
+ * `libcrypto.so` that expo-sqlite's SQLCipher already bundles. Pure JS sidesteps
+ * that entirely; our payloads (wrapped keys, small backups, receipt images) are
+ * well within pure-JS GCM's performance envelope.
+ *
+ * GCM provides confidentiality AND integrity: decryption throws if the
+ * ciphertext or tag was tampered with, exactly what we want for wrapped keys and
+ * backups.
  */
 
-import { Buffer } from '@craftzdog/react-native-buffer';
-import QuickCrypto from 'react-native-quick-crypto';
+import { gcm } from '@noble/ciphers/aes';
 
 import { bytesToHex, hexToBytes } from './bytes';
+import { randomBytes } from './random';
 
-const ALGORITHM = 'aes-256-gcm';
 export const IV_LENGTH = 12; // 96-bit nonce, recommended for GCM
 export const KEY_LENGTH = 32; // 256-bit key
 export const TAG_LENGTH = 16; // 128-bit auth tag
@@ -20,13 +25,18 @@ export const TAG_LENGTH = 16; // 128-bit auth tag
 export interface SealedData {
   /** Hex-encoded IV/nonce. */
   iv: string;
-  /** Hex-encoded ciphertext. */
+  /** Hex-encoded ciphertext (without the tag). */
   ciphertext: string;
   /** Hex-encoded GCM auth tag. */
   tag: string;
 }
 
-const toBuf = (bytes: Uint8Array) => Buffer.from(bytes);
+function concat(a: Uint8Array, b: Uint8Array): Uint8Array {
+  const out = new Uint8Array(a.length + b.length);
+  out.set(a, 0);
+  out.set(b, a.length);
+  return out;
+}
 
 /**
  * Encrypt `plaintext` (bytes) under `key` (32 bytes). Generates a fresh random
@@ -34,19 +44,18 @@ const toBuf = (bytes: Uint8Array) => Buffer.from(bytes);
  */
 export function seal(key: Uint8Array, plaintext: Uint8Array): SealedData {
   if (key.length !== KEY_LENGTH) throw new Error('AES key must be 32 bytes');
-  const iv = QuickCrypto.randomBytes(IV_LENGTH);
+  const iv = randomBytes(IV_LENGTH);
 
-  const cipher = QuickCrypto.createCipheriv(ALGORITHM, toBuf(key), iv);
-  const encrypted = Buffer.concat([
-    cipher.update(toBuf(plaintext)),
-    cipher.final(),
-  ]);
-  const tag = cipher.getAuthTag();
+  // noble returns ciphertext with the 16-byte tag appended.
+  const combined = gcm(key, iv).encrypt(plaintext);
+  const split = combined.length - TAG_LENGTH;
+  const ciphertext = combined.subarray(0, split);
+  const tag = combined.subarray(split);
 
   return {
-    iv: iv.toString('hex'),
-    ciphertext: encrypted.toString('hex'),
-    tag: tag.toString('hex'),
+    iv: bytesToHex(iv),
+    ciphertext: bytesToHex(ciphertext),
+    tag: bytesToHex(tag),
   };
 }
 
@@ -56,17 +65,8 @@ export function seal(key: Uint8Array, plaintext: Uint8Array): SealedData {
  */
 export function open(key: Uint8Array, sealed: SealedData): Uint8Array {
   if (key.length !== KEY_LENGTH) throw new Error('AES key must be 32 bytes');
-  const decipher = QuickCrypto.createDecipheriv(
-    ALGORITHM,
-    toBuf(key),
-    toBuf(hexToBytes(sealed.iv)),
-  );
-  decipher.setAuthTag(toBuf(hexToBytes(sealed.tag)));
-  const decrypted = Buffer.concat([
-    decipher.update(toBuf(hexToBytes(sealed.ciphertext))),
-    decipher.final(),
-  ]);
-  return Uint8Array.from(decrypted);
+  const combined = concat(hexToBytes(sealed.ciphertext), hexToBytes(sealed.tag));
+  return gcm(key, hexToBytes(sealed.iv)).decrypt(combined);
 }
 
 // Re-exported for callers that only need the hex helper alongside sealing.

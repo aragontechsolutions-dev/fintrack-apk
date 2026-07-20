@@ -215,9 +215,12 @@ npx expo start --dev-client
 ## Notas técnicas
 
 - **New Architecture** está **desactivada** (`app.json → newArchEnabled:false`)
-  para maximizar la compatibilidad de `react-native-quick-crypto` y
-  `react-native-argon2` en el primer build. Se puede activar tras verificar que
-  esas librerías funcionan en New Arch en tus dispositivos objetivo.
+  para maximizar la compatibilidad de `react-native-argon2` en el primer build.
+  Se puede activar tras verificar esa librería en New Arch en tus dispositivos.
+- **AES-256-GCM en JS puro** (`@noble/ciphers`): se evita a propósito una librería
+  nativa de OpenSSL (p. ej. `react-native-quick-crypto`) porque su `libcrypto.so`
+  choca en el build con el que ya trae SQLCipher (`expo-sqlite`). El Argon2 sí es
+  nativo (`react-native-argon2`), pero no incluye OpenSSL, así que no colisiona.
 - **Migraciones Drizzle:** generadas en `src/db/migrations/`. Para regenerar
   tras cambiar el esquema:
   ```bash

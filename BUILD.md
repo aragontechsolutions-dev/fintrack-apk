@@ -30,8 +30,8 @@ marcá y aplicá:
 
 - Android SDK Build-Tools
 - Android SDK Platform-Tools
-- **NDK (Side by side)** ← necesario para `react-native-quick-crypto` (C++/JSI)
-- **CMake** ← también para el build nativo de cripto
+- **NDK (Side by side)** ← necesario para compilar `react-native-argon2` (C nativo)
+- **CMake** ← también para el build nativo
 - Android Emulator (si vas a usar emulador)
 
 ### Variables de entorno
@@ -173,6 +173,7 @@ un keystore (ver docs de Android/Expo). Para probar rápido alcanza `assembleDeb
 | `adb: no devices` | Emulador apagado o USB sin autorizar. `adb devices` para confirmar. |
 | OCR devuelve vacío o error de ML Kit | Usá dispositivo/emulador **con Google Play Services**. |
 | La app no respalda en background a horario exacto | Es esperado: Android (WorkManager) es best-effort. El backup oportunista al abrir la app es el camino confiable. |
+| `2 files found with path 'lib/arm64-v8a/libcrypto.so'` | Choque de OpenSSL entre librerías. Ya resuelto (el cifrado usa `@noble/ciphers` en JS puro, sin OpenSSL nativo). Si aparece con un build viejo: `npx expo prebuild --clean` y recompilá. |
 | `expo-doctor` marca versiones | Corré `npx expo install --check` y aceptá los ajustes. |
 | Cambios en JS no se reflejan | Recargá Metro (tecla `r`) o reiniciá `npx expo start --dev-client -c`. |
 
@@ -181,8 +182,8 @@ un keystore (ver docs de Android/Expo). Para probar rápido alcanza `assembleDeb
 ## Notas del proyecto
 
 - **New Architecture está desactivada** (`app.json`) para máxima compatibilidad de
-  `react-native-quick-crypto` y `react-native-argon2`. Se puede activar más
-  adelante tras verificar esas librerías en tus dispositivos.
+  `react-native-argon2`. Se puede activar más adelante tras verificar esa
+  librería en tus dispositivos.
 - El **parser de OCR** (`src/ocr/parseReceipt.ts`) es un punto de partida:
   ajustalo probando con tickets uruguayos reales (los tests cubren un caso
   representativo).
