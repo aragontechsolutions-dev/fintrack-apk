@@ -107,11 +107,19 @@ export function DashboardScreen() {
         </Text>
       </Card>
 
-      <Button
-        title="+ Nuevo movimiento"
-        onPress={() => navigation.navigate('AddTransaction')}
-        style={{ marginVertical: spacing.sm }}
-      />
+      <View style={{ flexDirection: 'row', gap: spacing.md, marginVertical: spacing.sm }}>
+        <Button
+          title="+ Movimiento"
+          onPress={() => navigation.navigate('AddTransaction')}
+          style={{ flex: 1 }}
+        />
+        <Button
+          title="Cuentas"
+          variant="secondary"
+          onPress={() => navigation.navigate('Accounts')}
+          style={{ flex: 1 }}
+        />
+      </View>
 
       <Text style={styles.sectionTitle}>Movimientos recientes</Text>
       {recent.length === 0 ? (

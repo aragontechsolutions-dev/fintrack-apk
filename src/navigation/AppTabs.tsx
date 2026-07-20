@@ -5,7 +5,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { colors } from '../theme/theme';
 import { DashboardScreen } from '../screens/dashboard/DashboardScreen';
 import { TransactionsScreen } from '../screens/transactions/TransactionsScreen';
-import { AccountsScreen } from '../screens/accounts/AccountsScreen';
+import { SavingsScreen } from '../screens/savings/SavingsScreen';
+import { ReportsScreen } from '../screens/reports/ReportsScreen';
 import { SettingsScreen } from '../screens/settings/SettingsScreen';
 import { AppTabParamList } from './types';
 
@@ -14,7 +15,8 @@ const Tab = createBottomTabNavigator<AppTabParamList>();
 const ICONS: Record<keyof AppTabParamList, string> = {
   Dashboard: '🏠',
   Transactions: '💸',
-  Accounts: '👛',
+  Savings: '🎯',
+  Reports: '📊',
   Settings: '⚙️',
 };
 
@@ -42,9 +44,14 @@ export function AppTabs() {
         options={{ title: 'Movimientos' }}
       />
       <Tab.Screen
-        name="Accounts"
-        component={AccountsScreen}
-        options={{ title: 'Cuentas' }}
+        name="Savings"
+        component={SavingsScreen}
+        options={{ title: 'Ahorro' }}
+      />
+      <Tab.Screen
+        name="Reports"
+        component={ReportsScreen}
+        options={{ title: 'Reportes' }}
       />
       <Tab.Screen
         name="Settings"

@@ -23,3 +23,34 @@ export function formatDisplayDate(iso: string): string {
 export function startOfMonthISO(ref = new Date()): string {
   return toISODate(new Date(ref.getFullYear(), ref.getMonth(), 1));
 }
+
+const MONTH_LABELS = [
+  'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+  'jul', 'ago', 'sep', 'oct', 'nov', 'dic',
+];
+
+export interface MonthRange {
+  /** Inclusive start, YYYY-MM-DD. */
+  from: string;
+  /** Exclusive end (first day of next month), YYYY-MM-DD. */
+  to: string;
+  /** Short month label, e.g. "jul". */
+  label: string;
+  /** Full label, e.g. "jul 2026". */
+  fullLabel: string;
+}
+
+/**
+ * Half-open month range for the month `monthsBack` before the reference month
+ * (0 = current month).
+ */
+export function monthRange(monthsBack: number, ref = new Date()): MonthRange {
+  const start = new Date(ref.getFullYear(), ref.getMonth() - monthsBack, 1);
+  const end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+  return {
+    from: toISODate(start),
+    to: toISODate(end),
+    label: MONTH_LABELS[start.getMonth()],
+    fullLabel: `${MONTH_LABELS[start.getMonth()]} ${start.getFullYear()}`,
+  };
+}

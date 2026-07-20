@@ -5,17 +5,23 @@
  * the enforcement point for multi-user isolation inside the shared DB.
  */
 
-import { and, desc, eq, gte, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, lt, sql } from 'drizzle-orm';
 
 import { randomId } from '../crypto/random';
 import { Database } from '../db/client';
 import {
   Account,
+  Budget,
   Category,
+  SavingsContribution,
+  SavingsPlan,
   Transaction,
   accounts,
+  budgets,
   categories,
   exchangeRates,
+  savingsContributions,
+  savingsPlans,
   transactionItems,
   transactions,
 } from '../db/schema';
@@ -272,6 +278,76 @@ export function createRepositories(db: Database, userId: string) {
       };
     },
 
+    /** Income/expense (base minor) in the half-open range [fromISO, toISO). */
+    async totalsBetween(
+      fromISO: string,
+      toISO: string,
+    ): Promise<{ incomeBaseMinor: number; expenseBaseMinor: number }> {
+      const rows = await db
+        .select({
+          income: sql<number>`coalesce(sum(case when ${transactions.type} = 'income' then ${transactions.amountBaseMinor} else 0 end), 0)`,
+          expense: sql<number>`coalesce(sum(case when ${transactions.type} = 'expense' then ${transactions.amountBaseMinor} else 0 end), 0)`,
+        })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.userId, userId),
+            gte(transactions.date, fromISO),
+            lt(transactions.date, toISO),
+          ),
+        );
+      return {
+        incomeBaseMinor: rows[0]?.income ?? 0,
+        expenseBaseMinor: rows[0]?.expense ?? 0,
+      };
+    },
+
+    /** Expense totals (base minor) grouped by category, in [fromISO, toISO). */
+    async categorySpendingBetween(
+      fromISO: string,
+      toISO: string,
+    ): Promise<{ categoryId: string | null; totalBaseMinor: number }[]> {
+      return db
+        .select({
+          categoryId: transactions.categoryId,
+          totalBaseMinor: sql<number>`coalesce(sum(${transactions.amountBaseMinor}), 0)`,
+        })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.userId, userId),
+            eq(transactions.type, 'expense'),
+            gte(transactions.date, fromISO),
+            lt(transactions.date, toISO),
+          ),
+        )
+        .groupBy(transactions.categoryId)
+        .orderBy(desc(sql`coalesce(sum(${transactions.amountBaseMinor}), 0)`));
+    },
+
+    /** Total expense (base minor) for one category in [fromISO, toISO). */
+    async categoryExpenseBetween(
+      categoryId: string,
+      fromISO: string,
+      toISO: string,
+    ): Promise<number> {
+      const rows = await db
+        .select({
+          total: sql<number>`coalesce(sum(${transactions.amountBaseMinor}), 0)`,
+        })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.userId, userId),
+            eq(transactions.type, 'expense'),
+            eq(transactions.categoryId, categoryId),
+            gte(transactions.date, fromISO),
+            lt(transactions.date, toISO),
+          ),
+        );
+      return rows[0]?.total ?? 0;
+    },
+
     async create(input: TransactionInput): Promise<string> {
       const id = randomId();
       await db.insert(transactions).values({
@@ -396,11 +472,195 @@ export function createRepositories(db: Database, userId: string) {
     },
   };
 
+  /* ---------------------------- Savings --------------------------------- */
+  const savingsRepo = {
+    async listPlans(includeArchived = false): Promise<SavingsPlan[]> {
+      const where = includeArchived
+        ? eq(savingsPlans.userId, userId)
+        : and(eq(savingsPlans.userId, userId), eq(savingsPlans.archived, false));
+      return db
+        .select()
+        .from(savingsPlans)
+        .where(where)
+        .orderBy(asc(savingsPlans.name));
+    },
+
+    async getPlan(id: string): Promise<SavingsPlan | undefined> {
+      const rows = await db
+        .select()
+        .from(savingsPlans)
+        .where(and(eq(savingsPlans.userId, userId), eq(savingsPlans.id, id)))
+        .limit(1);
+      return rows[0];
+    },
+
+    async createPlan(input: {
+      name: string;
+      targetMinor: number;
+      currency: string;
+      targetDate?: string | null;
+      kind: 'goal' | 'envelope';
+      accountId?: string | null;
+    }): Promise<string> {
+      const id = randomId();
+      await db.insert(savingsPlans).values({
+        id,
+        userId,
+        name: input.name,
+        targetMinor: input.targetMinor,
+        currency: input.currency,
+        targetDate: input.targetDate ?? null,
+        kind: input.kind,
+        accountId: input.accountId ?? null,
+      });
+      return id;
+    },
+
+    async updatePlan(
+      id: string,
+      input: Partial<{
+        name: string;
+        targetMinor: number;
+        currency: string;
+        targetDate: string | null;
+        kind: 'goal' | 'envelope';
+      }>,
+    ): Promise<void> {
+      await db
+        .update(savingsPlans)
+        .set(input)
+        .where(and(eq(savingsPlans.userId, userId), eq(savingsPlans.id, id)));
+    },
+
+    async archivePlan(id: string): Promise<void> {
+      await db
+        .update(savingsPlans)
+        .set({ archived: true })
+        .where(and(eq(savingsPlans.userId, userId), eq(savingsPlans.id, id)));
+    },
+
+    async savedMinor(planId: string): Promise<number> {
+      const rows = await db
+        .select({
+          total: sql<number>`coalesce(sum(${savingsContributions.amountMinor}), 0)`,
+        })
+        .from(savingsContributions)
+        .where(
+          and(
+            eq(savingsContributions.userId, userId),
+            eq(savingsContributions.planId, planId),
+          ),
+        );
+      return rows[0]?.total ?? 0;
+    },
+
+    async listContributions(planId: string): Promise<SavingsContribution[]> {
+      return db
+        .select()
+        .from(savingsContributions)
+        .where(
+          and(
+            eq(savingsContributions.userId, userId),
+            eq(savingsContributions.planId, planId),
+          ),
+        )
+        .orderBy(desc(savingsContributions.date));
+    },
+
+    async addContribution(input: {
+      planId: string;
+      date: string;
+      amountMinor: number;
+      transactionId?: string | null;
+    }): Promise<string> {
+      const id = randomId();
+      await db.insert(savingsContributions).values({
+        id,
+        userId,
+        planId: input.planId,
+        date: input.date,
+        amountMinor: input.amountMinor,
+        transactionId: input.transactionId ?? null,
+      });
+      return id;
+    },
+
+    async removeContribution(id: string): Promise<void> {
+      await db
+        .delete(savingsContributions)
+        .where(
+          and(
+            eq(savingsContributions.userId, userId),
+            eq(savingsContributions.id, id),
+          ),
+        );
+    },
+  };
+
+  /* ---------------------------- Budgets --------------------------------- */
+  const budgetsRepo = {
+    async list(): Promise<Budget[]> {
+      return db.select().from(budgets).where(eq(budgets.userId, userId));
+    },
+
+    async get(id: string): Promise<Budget | undefined> {
+      const rows = await db
+        .select()
+        .from(budgets)
+        .where(and(eq(budgets.userId, userId), eq(budgets.id, id)))
+        .limit(1);
+      return rows[0];
+    },
+
+    async forCategory(categoryId: string): Promise<Budget | undefined> {
+      const rows = await db
+        .select()
+        .from(budgets)
+        .where(
+          and(eq(budgets.userId, userId), eq(budgets.categoryId, categoryId)),
+        )
+        .limit(1);
+      return rows[0];
+    },
+
+    async upsert(input: {
+      categoryId: string;
+      period: 'monthly' | 'weekly';
+      limitMinor: number;
+      currency: string;
+    }): Promise<void> {
+      const existing = await this.forCategory(input.categoryId);
+      if (existing) {
+        await db
+          .update(budgets)
+          .set({ limitMinor: input.limitMinor, period: input.period })
+          .where(and(eq(budgets.userId, userId), eq(budgets.id, existing.id)));
+      } else {
+        await db.insert(budgets).values({
+          id: randomId(),
+          userId,
+          categoryId: input.categoryId,
+          period: input.period,
+          limitMinor: input.limitMinor,
+          currency: input.currency,
+        });
+      }
+    },
+
+    async remove(id: string): Promise<void> {
+      await db
+        .delete(budgets)
+        .where(and(eq(budgets.userId, userId), eq(budgets.id, id)));
+    },
+  };
+
   return {
     accounts: accountsRepo,
     categories: categoriesRepo,
     transactions: transactionsRepo,
     rates: ratesRepo,
+    savings: savingsRepo,
+    budgets: budgetsRepo,
   };
 }
 

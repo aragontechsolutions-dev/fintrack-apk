@@ -97,6 +97,10 @@ export function SettingsScreen() {
       <Text style={styles.section}>Gestión</Text>
       <Card style={{ padding: 0 }}>
         <Item
+          label="Cuentas"
+          onPress={() => navigation.navigate('Accounts')}
+        />
+        <Item
           label="Categorías"
           onPress={() => navigation.navigate('CategoryList')}
         />

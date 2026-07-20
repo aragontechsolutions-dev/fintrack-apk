@@ -5,9 +5,9 @@ Aplicación Android nativa (React Native + Expo) de **finanzas personales**,
 dispositivo. Sin servidores: toda la seguridad recae en el cifrado en reposo y
 el control de acceso local.
 
-> Estado actual: **Etapas 0, 1 y 4 completas** (Fundaciones, Multiusuario +
-> núcleo financiero, y Backups), más la base de multimoneda (Etapa 2 parcial).
-> Ver [Roadmap](#roadmap).
+> Estado actual: **Etapas 0, 1, 3 y 4 completas** (Fundaciones, Multiusuario +
+> núcleo financiero, Ahorro/Presupuestos/Reportes, y Backups), más la base de
+> multimoneda (Etapa 2 parcial). Ver [Roadmap](#roadmap).
 
 ---
 
@@ -25,6 +25,11 @@ el control de acceso local.
   el equivalente en la moneda base (por defecto UYU). Dinero siempre en
   **enteros de centavos** (nunca float).
 - **Dashboard**: saldo total por moneda, ingresos/gastos/balance del mes.
+- **Ahorro**: metas y sobres con progreso, aportes y proyección de cumplimiento.
+- **Presupuestos**: límite mensual por categoría con gasto consumido y alerta de
+  exceso.
+- **Reportes**: gastos por categoría, ingresos vs. gastos de los últimos 6
+  meses (gráficos basados en Views, sin dependencias nativas de charts).
 - **Seguridad**: base cifrada con SQLCipher, clave protegida por
   key-wrapping (Argon2id + AES-256-GCM), auto-logout por inactividad, bloqueo
   al pasar a segundo plano y bloqueo de capturas de pantalla.
@@ -204,10 +209,15 @@ npx expo start --dev-client
 | 0 | Fundaciones: dev build, SQLCipher+Drizzle, cripto (Argon2id/AES-GCM/key-wrapping) | ✅ |
 | 1 | Multiusuario local, núcleo financiero (cuentas, categorías, transacciones, transferencias, saldos), auto-logout, biometría | ✅ |
 | 2 | Multimoneda + líneas de detalle por compra | 🟡 (multimoneda base lista; falta detalle de ítems y OCR) |
-| 3 | Planes de ahorro + presupuestos + reportes/gráficos | ⬜ (esquema listo) |
+| 3 | Planes de ahorro + presupuestos + reportes/gráficos | ✅ |
 | 4 | Backups manual + automático cifrados y versionados | ✅ |
 | 5 | OCR de tickets (ML Kit on-device) + pantalla de revisión | ⬜ |
 | 6 | Endurecimiento MASVS, tasa BCU/DolarApi opcional, backup a la nube | ⬜ |
 
-Las tablas de ahorro, presupuestos y líneas de detalle **ya existen en el
-esquema** (`src/db/schema.ts`), listas para construir sus pantallas.
+Las tablas de líneas de detalle por compra **ya existen en el esquema**
+(`src/db/schema.ts`), listas para construir sus pantallas (Etapa 2).
+
+Los reportes usan gráficos basados en Views (`src/components/charts.tsx`) para
+no arrastrar dependencias nativas. Si más adelante se necesitan gráficos
+interactivos (tooltips, gestos), la ruta de mejora es **Victory Native (XL)**
+sobre Skia.
