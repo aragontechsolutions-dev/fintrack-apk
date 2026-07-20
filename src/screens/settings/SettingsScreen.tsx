@@ -101,6 +101,10 @@ export function SettingsScreen() {
           onPress={() => navigation.navigate('CategoryList')}
         />
         <Item
+          label="Backups"
+          onPress={() => navigation.navigate('Backup')}
+        />
+        <Item
           label="Agregar usuario"
           onPress={() => navigation.navigate('AddUser')}
         />
@@ -113,8 +117,8 @@ export function SettingsScreen() {
 
       <Subtle>
         Recordá: los datos se guardan cifrados solo en este dispositivo. Si
-        olvidás tu contraseña no hay forma de recuperarlos. (Los backups llegan
-        en una próxima etapa.)
+        olvidás tu contraseña no hay forma de recuperarlos. Hacé backups desde
+        Gestión → Backups.
       </Subtle>
     </ScrollView>
   );

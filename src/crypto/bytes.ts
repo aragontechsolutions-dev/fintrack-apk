@@ -58,6 +58,10 @@ export function utf8ToBytes(str: string): Uint8Array {
   return new TextEncoder().encode(str);
 }
 
+export function bytesToUtf8(bytes: Uint8Array): string {
+  return new TextDecoder().decode(bytes);
+}
+
 /** Constant-time comparison of two byte arrays. */
 export function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
   if (a.length !== b.length) return false;

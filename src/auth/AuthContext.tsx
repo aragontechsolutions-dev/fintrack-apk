@@ -19,6 +19,8 @@ import { AppState, AppStateStatus } from 'react-native';
 import * as ScreenCapture from 'expo-screen-capture';
 
 import { getDatabase } from '../db/client';
+import { maybeRunAutoBackup } from '../backup/autoBackup';
+import { registerBackupTask } from '../backup/backgroundTask';
 import { CurrencyCode } from '../money/currency';
 import { Repositories, createRepositories } from '../data/repositories';
 import {
@@ -117,10 +119,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
+  // Register the best-effort background backup task once on mount.
+  useEffect(() => {
+    registerBackupTask().catch(() => {});
+  }, []);
+
   const applySession = useCallback((s: Session) => {
     autoLogoutSeconds.current = DEFAULT_AUTO_LOGOUT_SECONDS;
     setSession(s);
     setFirstRun(false);
+    // Opportunistic backup: DB is open here, so a snapshot can checkpoint it.
+    maybeRunAutoBackup().catch(() => {});
   }, []);
 
   const createFirstUser = useCallback(

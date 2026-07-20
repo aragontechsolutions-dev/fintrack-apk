@@ -9,6 +9,7 @@ import { AccountFormScreen } from '../screens/accounts/AccountFormScreen';
 import { AccountDetailScreen } from '../screens/accounts/AccountDetailScreen';
 import { CategoryListScreen } from '../screens/categories/CategoryListScreen';
 import { AddUserScreen } from '../screens/settings/AddUserScreen';
+import { BackupScreen } from '../screens/settings/BackupScreen';
 import { MainStackParamList } from './types';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
@@ -56,6 +57,11 @@ export function MainNavigator() {
         name="AddUser"
         component={AddUserScreen}
         options={{ title: 'Agregar usuario', presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="Backup"
+        component={BackupScreen}
+        options={{ title: 'Backups' }}
       />
     </Stack.Navigator>
   );

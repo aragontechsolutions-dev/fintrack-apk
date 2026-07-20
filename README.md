@@ -5,9 +5,9 @@ Aplicación Android nativa (React Native + Expo) de **finanzas personales**,
 dispositivo. Sin servidores: toda la seguridad recae en el cifrado en reposo y
 el control de acceso local.
 
-> Estado actual: **Etapa 0 (Fundaciones) + Etapa 1 (Multiusuario + núcleo
-> financiero) completas**, más la base de multimoneda (Etapa 2 parcial). Ver
-> [Roadmap](#roadmap).
+> Estado actual: **Etapas 0, 1 y 4 completas** (Fundaciones, Multiusuario +
+> núcleo financiero, y Backups), más la base de multimoneda (Etapa 2 parcial).
+> Ver [Roadmap](#roadmap).
 
 ---
 
@@ -28,6 +28,8 @@ el control de acceso local.
 - **Seguridad**: base cifrada con SQLCipher, clave protegida por
   key-wrapping (Argon2id + AES-256-GCM), auto-logout por inactividad, bloqueo
   al pasar a segundo plano y bloqueo de capturas de pantalla.
+- **Backups**: export portable cifrado con passphrase + snapshots locales
+  automáticos cada 24 h (ver [Backups](#backups)).
 
 ---
 
@@ -74,6 +76,29 @@ contraseña. La biometría guarda la DEK en el **Android Keystore** vía
 - La integración automática con el BCU (SOAP, sin CORS, solo días hábiles) **no**
   se implementa por diseño; queda como mejora opcional vía proxy/DolarApi.
 
+### Backups
+
+Hay **dos mecanismos complementarios**, porque la app descarta la clave de la
+base (DEK) al ir a segundo plano y una tarea en background no puede descifrarla:
+
+1. **Export portable cifrado (manual).** Vuelca los datos del usuario a un
+   contenedor `.ftbk` cifrado con **AES-256-GCM**, con clave derivada por
+   **Argon2id** de una **passphrase propia** (independiente del PIN). Incluye
+   cabecera con versión de formato/esquema y checksum SHA-256. Es portable entre
+   dispositivos y se comparte con el share sheet. Restaurar valida
+   magic/versión/checksum, descifra (el tag GCM detecta passphrase incorrecta o
+   manipulación) y **reemplaza** los datos del usuario (remapeando `user_id`).
+2. **Snapshot local automático.** Copia el archivo `.db` (ya cifrado en reposo)
+   + `auth.json` a `documentDirectory/backups/`. Como no necesita la DEK, puede
+   correr en **background** (`expo-background-fetch`/WorkManager). Escritura
+   atómica (temp → move), se conservan los últimos N y se guarda `lastBackupAt`.
+
+**Sobre "cada 24 h":** Android no garantiza hora exacta (WorkManager: mínimo
+15 min, sujeto a Doze/fabricante). Por eso el mecanismo confiable es
+**oportunista**: al iniciar sesión, si pasaron ≥24 h, se crea un snapshot; el
+background es un refuerzo best-effort que además notifica si hace ≥3 días que no
+hay backup. Antes de cualquier restauración se toma un snapshot de seguridad.
+
 ---
 
 ## Estructura del proyecto
@@ -81,6 +106,7 @@ contraseña. La biometría guarda la DEK en el **Android Keystore** vía
 ```
 src/
   crypto/        Argon2id, AES-256-GCM, key-wrapping, random, secure store
+  backup/        Export/import portable, snapshots locales, tarea background
   db/            Esquema Drizzle, cliente SQLCipher, migraciones, seeds
   money/         Tipo Money (centavos), formateo/parseo, tasas de cambio (fx)
   auth/          Auth store (JSON), servicio de usuarios, AuthContext (sesión)
@@ -179,7 +205,7 @@ npx expo start --dev-client
 | 1 | Multiusuario local, núcleo financiero (cuentas, categorías, transacciones, transferencias, saldos), auto-logout, biometría | ✅ |
 | 2 | Multimoneda + líneas de detalle por compra | 🟡 (multimoneda base lista; falta detalle de ítems y OCR) |
 | 3 | Planes de ahorro + presupuestos + reportes/gráficos | ⬜ (esquema listo) |
-| 4 | Backups manual + automático cifrados y versionados | ⬜ |
+| 4 | Backups manual + automático cifrados y versionados | ✅ |
 | 5 | OCR de tickets (ML Kit on-device) + pantalla de revisión | ⬜ |
 | 6 | Endurecimiento MASVS, tasa BCU/DolarApi opcional, backup a la nube | ⬜ |
 

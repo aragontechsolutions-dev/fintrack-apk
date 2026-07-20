@@ -64,6 +64,18 @@ export function isDatabaseOpen(): boolean {
   return db !== null;
 }
 
+/**
+ * Force a WAL checkpoint so the main .db file is fully up to date. Call before
+ * copying the database files for a snapshot while the DB is open.
+ */
+export function checkpoint(): void {
+  try {
+    sqlite?.execSync('PRAGMA wal_checkpoint(TRUNCATE)');
+  } catch {
+    // ignore — best effort
+  }
+}
+
 /** Close the database and drop in-memory handles (used on logout). */
 export function closeDatabase(): void {
   try {

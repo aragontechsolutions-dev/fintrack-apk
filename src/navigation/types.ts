@@ -21,4 +21,5 @@ export type MainStackParamList = {
   AccountDetail: { accountId: string };
   CategoryList: undefined;
   AddUser: undefined;
+  Backup: undefined;
 };
