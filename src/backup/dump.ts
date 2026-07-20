@@ -98,6 +98,26 @@ export interface RestoreCounts {
 }
 
 /**
+ * Delete all of a user's rows across every owned table (children first). Does
+ * NOT touch the `users` profile row or files on disk.
+ */
+export async function deleteUserData(
+  db: Database,
+  userId: string,
+): Promise<void> {
+  await db.delete(transactionItems).where(eq(transactionItems.userId, userId));
+  await db
+    .delete(savingsContributions)
+    .where(eq(savingsContributions.userId, userId));
+  await db.delete(savingsPlans).where(eq(savingsPlans.userId, userId));
+  await db.delete(transactions).where(eq(transactions.userId, userId));
+  await db.delete(budgets).where(eq(budgets.userId, userId));
+  await db.delete(exchangeRates).where(eq(exchangeRates.userId, userId));
+  await db.delete(categories).where(eq(categories.userId, userId));
+  await db.delete(accounts).where(eq(accounts.userId, userId));
+}
+
+/**
  * Replace the importing user's data with the dump's data. Deletes existing
  * rows for `userId`, then inserts the backup rows with `userId` remapped.
  *
@@ -113,17 +133,7 @@ export async function restoreUserData(
   const remap = <T extends Record<string, unknown>>(rows: T[]): T[] =>
     rows.map((r) => ({ ...r, userId }));
 
-  // Delete existing rows (children first for clarity; no FK cascade assumed).
-  await db.delete(transactionItems).where(eq(transactionItems.userId, userId));
-  await db
-    .delete(savingsContributions)
-    .where(eq(savingsContributions.userId, userId));
-  await db.delete(savingsPlans).where(eq(savingsPlans.userId, userId));
-  await db.delete(transactions).where(eq(transactions.userId, userId));
-  await db.delete(budgets).where(eq(budgets.userId, userId));
-  await db.delete(exchangeRates).where(eq(exchangeRates.userId, userId));
-  await db.delete(categories).where(eq(categories.userId, userId));
-  await db.delete(accounts).where(eq(accounts.userId, userId));
+  await deleteUserData(db, userId);
 
   const t = dump.tables;
   const insertMany = async (table: any, rows: Record<string, unknown>[]) => {

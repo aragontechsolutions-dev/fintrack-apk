@@ -26,11 +26,15 @@ import { Repositories, createRepositories } from '../data/repositories';
 import {
   Session,
   addUser as addUserSvc,
+  changePassword as changePasswordSvc,
   createFirstUser as createFirstUserSvc,
+  deleteMyProfile as deleteMyProfileSvc,
   isFirstRun as isFirstRunSvc,
   loginWithBiometrics as loginBiometricSvc,
   loginWithPassword as loginPasswordSvc,
   logout as logoutSvc,
+  purgeMyData as purgeMyDataSvc,
+  updateAutoLogoutSeconds as updateAutoLogoutSvc,
 } from './userService';
 
 interface AuthContextValue {
@@ -46,6 +50,10 @@ interface AuthContextValue {
   loginWithPassword: (userId: string, password: string) => Promise<void>;
   loginWithBiometrics: (userId: string) => Promise<boolean>;
   addUser: (name: string, password: string) => Promise<void>;
+  changePin: (oldPin: string, newPin: string) => Promise<void>;
+  setAutoLogoutSeconds: (seconds: number) => Promise<void>;
+  purgeMyData: () => Promise<void>;
+  deleteMyProfile: () => Promise<void>;
   logout: () => void;
   /** Reset the inactivity timer; call on any user interaction. */
   touch: () => void;
@@ -74,6 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const touch = useCallback(() => {
     if (!session) return;
     if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+    // 0 (or less) means "never auto-logout while foregrounded".
+    if (autoLogoutSeconds.current <= 0) return;
     inactivityTimer.current = setTimeout(
       doLogout,
       autoLogoutSeconds.current * 1000,
@@ -125,7 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const applySession = useCallback((s: Session) => {
-    autoLogoutSeconds.current = DEFAULT_AUTO_LOGOUT_SECONDS;
+    autoLogoutSeconds.current = s.autoLogoutSeconds || DEFAULT_AUTO_LOGOUT_SECONDS;
     setSession(s);
     setFirstRun(false);
     // Opportunistic backup: DB is open here, so a snapshot can checkpoint it.
@@ -166,6 +176,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [session],
   );
 
+  const changePin = useCallback(
+    async (oldPin: string, newPin: string) => {
+      if (!session) throw new Error('Se requiere una sesión activa.');
+      await changePasswordSvc(session.userId, oldPin, newPin);
+    },
+    [session],
+  );
+
+  const setAutoLogoutSeconds = useCallback(
+    async (seconds: number) => {
+      if (!session) throw new Error('Se requiere una sesión activa.');
+      await updateAutoLogoutSvc(session.dek, session.userId, seconds);
+      autoLogoutSeconds.current = seconds;
+      setSession({ ...session, autoLogoutSeconds: seconds });
+      touch();
+    },
+    [session, touch],
+  );
+
+  const purgeMyData = useCallback(async () => {
+    if (!session) throw new Error('Se requiere una sesión activa.');
+    await purgeMyDataSvc(session.dek, session.userId);
+  }, [session]);
+
+  const deleteMyProfile = useCallback(async () => {
+    if (!session) throw new Error('Se requiere una sesión activa.');
+    await deleteMyProfileSvc(session.dek, session.userId);
+    doLogout();
+    setFirstRun(await isFirstRunSvc());
+  }, [session, doLogout]);
+
   const refreshFirstRun = useCallback(async () => {
     setFirstRun(await isFirstRunSvc());
   }, []);
@@ -184,6 +225,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loginWithPassword,
     loginWithBiometrics,
     addUser,
+    changePin,
+    setAutoLogoutSeconds,
+    purgeMyData,
+    deleteMyProfile,
     logout: doLogout,
     touch,
     refreshFirstRun,

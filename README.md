@@ -5,10 +5,11 @@ Aplicación Android nativa (React Native + Expo) de **finanzas personales**,
 dispositivo. Sin servidores: toda la seguridad recae en el cifrado en reposo y
 el control de acceso local.
 
-> Estado actual: **Etapas 0–5 completas** (Fundaciones, Multiusuario + núcleo
-> financiero, Multimoneda + líneas de detalle, Ahorro/Presupuestos/Reportes,
-> Backups, y OCR de tickets). Queda la Etapa 6 (endurecimiento + opcionales).
-> Ver [Roadmap](#roadmap).
+> Estado actual: **Etapas 0–6 completas.** App funcionalmente terminada:
+> fundaciones, multiusuario, multimoneda + detalle, ahorro/presupuestos/reportes,
+> backups, OCR de tickets, y endurecimiento (cambio de PIN, auto-logout
+> configurable, borrado de datos, cotización USD online opcional). Ver
+> [Roadmap](#roadmap).
 
 ---
 
@@ -39,8 +40,11 @@ el control de acceso local.
   últimos 6 meses, y **tasa de ahorro** del mes y su tendencia (gráficos basados
   en Views, sin dependencias nativas de charts).
 - **Seguridad**: base cifrada con SQLCipher, clave protegida por
-  key-wrapping (Argon2id + AES-256-GCM), auto-logout por inactividad, bloqueo
-  al pasar a segundo plano y bloqueo de capturas de pantalla.
+  key-wrapping (Argon2id + AES-256-GCM), **auto-logout configurable** (1/2/5/10
+  min o nunca), bloqueo al pasar a segundo plano, bloqueo de capturas de
+  pantalla, **cambio de PIN** (pidiendo el anterior) y **borrado de datos/perfil**.
+- **Cotización USD opcional**: tasa manual o actualización online desde DolarApi
+  (con fallback y cache; la app funciona sin conexión).
 - **Backups**: export portable cifrado con passphrase + snapshots locales
   automáticos cada 24 h (ver [Backups](#backups)).
 
@@ -147,6 +151,7 @@ src/
   backup/        Export/import portable, snapshots locales, tarea background
   ocr/           Reconocimiento ML Kit + parser de tickets
   receipts/      Almacenamiento cifrado de imágenes de tickets
+  services/      Integraciones externas opcionales (DolarApi)
   db/            Esquema Drizzle, cliente SQLCipher, migraciones, seeds
   money/         Tipo Money (centavos), formateo/parseo, tasas de cambio (fx)
   auth/          Auth store (JSON), servicio de usuarios, AuthContext (sesión)
@@ -230,8 +235,11 @@ npx expo start --dev-client
 - Datos en reposo cifrados (SQLCipher / AES-256). Secretos en Keystore.
 - Derivación de clave con Argon2id (OWASP: m≥19 MiB, t=2, p=1).
 - Cifrado autenticado AES-256-GCM (detecta manipulación).
-- Auto-logout por inactividad + bloqueo al ir a segundo plano.
+- Auto-logout por inactividad **configurable** + bloqueo al ir a segundo plano.
 - Bloqueo de capturas de pantalla en sesión (`expo-screen-capture`).
+- Cambio de PIN (verifica el anterior; re-envuelve la misma DEK).
+- Borrado de datos del perfil y eliminación total del perfil (incluye imágenes
+  de tickets cifradas).
 - **Sin recuperación de contraseña:** si se olvida, los datos son
   irrecuperables. La app insiste en hacer backups (llegan en Etapa 4).
 
@@ -247,7 +255,11 @@ npx expo start --dev-client
 | 3 | Planes de ahorro + presupuestos + reportes/gráficos | ✅ |
 | 4 | Backups manual + automático cifrados y versionados | ✅ |
 | 5 | OCR de tickets (ML Kit on-device) + pantalla de revisión | ✅ |
-| 6 | Endurecimiento MASVS, tasa BCU/DolarApi opcional, backup a la nube | ⬜ |
+| 6 | Endurecimiento (cambio de PIN, auto-logout config., borrado, DolarApi) | ✅ |
+
+> Extras opcionales que quedan fuera de alcance por ahora: auditoría MASVS
+> automatizada en CI (MobSF) y backup a la nube (Google Drive). El backup local
+> cifrado y el export portable ya cubren la recuperación ante desastre.
 
 La Etapa 5 (OCR de tickets con ML Kit on-device) reutiliza el editor de líneas
 de detalle (`src/components/LineItemsEditor.tsx`): el OCR sólo precarga las filas

@@ -26,7 +26,9 @@ import {
   seedCurrencies,
   seedDefaultCategories,
 } from '../db/migrate';
-import { users } from '../db/schema';
+import { deleteUserData } from '../backup/dump';
+import { deleteReceipt } from '../receipts/receiptStore';
+import { transactions, users } from '../db/schema';
 import {
   AuthUserRecord,
   getUser,
@@ -43,6 +45,7 @@ export interface Session {
   /** Raw DEK held in memory only for the session's lifetime. */
   dek: Uint8Array;
   baseCurrency: CurrencyCode;
+  autoLogoutSeconds: number;
 }
 
 export class InvalidCredentialsError extends Error {
@@ -109,7 +112,7 @@ export async function createFirstUser(
     createdAt: Date.now(),
   });
 
-  return { userId: id, name, dek, baseCurrency };
+  return { userId: id, name, dek, baseCurrency, autoLogoutSeconds: 120 };
 }
 
 /**
@@ -162,7 +165,11 @@ export async function loginWithPassword(
   await seedCurrencies(db);
 
   const profile = await db
-    .select({ baseCurrency: users.baseCurrency, name: users.name })
+    .select({
+      baseCurrency: users.baseCurrency,
+      name: users.name,
+      autoLogoutSeconds: users.autoLogoutSeconds,
+    })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
@@ -172,6 +179,7 @@ export async function loginWithPassword(
     name: record.name,
     dek,
     baseCurrency: (profile[0]?.baseCurrency as CurrencyCode) ?? 'UYU',
+    autoLogoutSeconds: profile[0]?.autoLogoutSeconds ?? 120,
   };
 }
 
@@ -191,7 +199,10 @@ export async function loginWithBiometrics(
   await seedCurrencies(db);
 
   const profile = await db
-    .select({ baseCurrency: users.baseCurrency })
+    .select({
+      baseCurrency: users.baseCurrency,
+      autoLogoutSeconds: users.autoLogoutSeconds,
+    })
     .from(users)
     .where(eq(users.id, userId))
     .limit(1);
@@ -201,6 +212,7 @@ export async function loginWithBiometrics(
     name: record.name,
     dek,
     baseCurrency: (profile[0]?.baseCurrency as CurrencyCode) ?? 'UYU',
+    autoLogoutSeconds: profile[0]?.autoLogoutSeconds ?? 120,
   };
 }
 
@@ -220,6 +232,91 @@ export async function disableBiometrics(userId: string): Promise<void> {
 export async function deleteProfile(userId: string): Promise<void> {
   await clearBiometricDek(userId);
   await removeUser(userId);
+}
+
+/**
+ * Change a profile's PIN/password. Verifies the old password by unwrapping the
+ * DEK, then re-wraps the SAME DEK under the new password. The DEK is unchanged,
+ * so an existing biometric entry keeps working.
+ */
+export async function changePassword(
+  userId: string,
+  oldPassword: string,
+  newPassword: string,
+): Promise<void> {
+  const record = await getUser(userId);
+  if (!record) throw new InvalidCredentialsError();
+
+  let dek: Uint8Array;
+  try {
+    dek = await unwrapDek(record.wrapped, oldPassword);
+  } catch {
+    throw new InvalidCredentialsError();
+  }
+
+  const wrapped = await wrapDek(dek, newPassword);
+  await upsertUser({ ...record, wrapped });
+}
+
+/**
+ * Erase all of a user's financial data (and encrypted receipt images), keeping
+ * the profile and re-seeding the default categories for a fresh start.
+ */
+export async function purgeMyData(
+  dek: Uint8Array,
+  userId: string,
+): Promise<void> {
+  const db = openDatabase(dek);
+
+  // Remove encrypted receipt files referenced by this user's transactions.
+  const rows = await db
+    .select({ path: transactions.receiptImagePath })
+    .from(transactions)
+    .where(eq(transactions.userId, userId));
+  for (const r of rows) {
+    if (r.path) await deleteReceipt(r.path);
+  }
+
+  await deleteUserData(db, userId);
+  await seedDefaultCategories(db, userId);
+}
+
+/**
+ * Delete a profile entirely: purge its data + encrypted receipts, remove its
+ * DB profile row, and drop its auth record + biometric secret.
+ */
+export async function deleteMyProfile(
+  dek: Uint8Array,
+  userId: string,
+): Promise<void> {
+  const db = openDatabase(dek);
+
+  const rows = await db
+    .select({ path: transactions.receiptImagePath })
+    .from(transactions)
+    .where(eq(transactions.userId, userId));
+  for (const r of rows) {
+    if (r.path) await deleteReceipt(r.path);
+  }
+
+  await deleteUserData(db, userId);
+  await db.delete(users).where(eq(users.id, userId));
+
+  await clearBiometricDek(userId);
+  await removeUser(userId);
+}
+
+/** Persist a new auto-logout timeout (seconds) for the profile. */
+export async function updateAutoLogoutSeconds(
+  dek: Uint8Array,
+  userId: string,
+  seconds: number,
+): Promise<void> {
+  const db = openDatabase(dek);
+  await db
+    .update(users)
+    .set({ autoLogoutSeconds: seconds })
+    .where(eq(users.id, userId));
 }
 
 export function logout(): void {

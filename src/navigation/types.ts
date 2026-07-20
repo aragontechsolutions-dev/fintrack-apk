@@ -25,6 +25,8 @@ export type MainStackParamList = {
   CategoryList: undefined;
   AddUser: undefined;
   Backup: undefined;
+  ChangePin: undefined;
+  ExchangeRate: undefined;
   SavingsPlanForm: { planId?: string } | undefined;
   SavingsPlanDetail: { planId: string };
   Budgets: undefined;

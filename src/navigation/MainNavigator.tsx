@@ -12,6 +12,8 @@ import { AccountDetailScreen } from '../screens/accounts/AccountDetailScreen';
 import { CategoryListScreen } from '../screens/categories/CategoryListScreen';
 import { AddUserScreen } from '../screens/settings/AddUserScreen';
 import { BackupScreen } from '../screens/settings/BackupScreen';
+import { ChangePinScreen } from '../screens/settings/ChangePinScreen';
+import { ExchangeRateScreen } from '../screens/settings/ExchangeRateScreen';
 import { SavingsPlanFormScreen } from '../screens/savings/SavingsPlanFormScreen';
 import { SavingsPlanDetailScreen } from '../screens/savings/SavingsPlanDetailScreen';
 import { BudgetsScreen } from '../screens/budgets/BudgetsScreen';
@@ -77,6 +79,16 @@ export function MainNavigator() {
         name="Backup"
         component={BackupScreen}
         options={{ title: 'Backups' }}
+      />
+      <Stack.Screen
+        name="ChangePin"
+        component={ChangePinScreen}
+        options={{ title: 'Cambiar PIN', presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="ExchangeRate"
+        component={ExchangeRateScreen}
+        options={{ title: 'Cotización USD' }}
       />
       <Stack.Screen
         name="SavingsPlanForm"
