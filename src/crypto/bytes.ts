@@ -53,6 +53,32 @@ export function bytesToBase64(bytes: Uint8Array): string {
   return out;
 }
 
+const B64_LOOKUP: Record<string, number> = (() => {
+  const map: Record<string, number> = {};
+  for (let i = 0; i < B64_CHARS.length; i++) map[B64_CHARS[i]] = i;
+  return map;
+})();
+
+export function base64ToBytes(b64: string): Uint8Array {
+  const clean = b64.replace(/[^A-Za-z0-9+/]/g, '');
+  const len = clean.length;
+  const pad = clean.endsWith('==') ? 2 : clean.endsWith('=') ? 1 : 0;
+  const outLen = Math.floor((len * 3) / 4) - pad;
+  const out = new Uint8Array(outLen > 0 ? outLen : 0);
+  let o = 0;
+  for (let i = 0; i < len; i += 4) {
+    const n0 = B64_LOOKUP[clean[i]] ?? 0;
+    const n1 = B64_LOOKUP[clean[i + 1]] ?? 0;
+    const n2 = B64_LOOKUP[clean[i + 2]] ?? 0;
+    const n3 = B64_LOOKUP[clean[i + 3]] ?? 0;
+    const triplet = (n0 << 18) | (n1 << 12) | (n2 << 6) | n3;
+    if (o < outLen) out[o++] = (triplet >> 16) & 0xff;
+    if (o < outLen) out[o++] = (triplet >> 8) & 0xff;
+    if (o < outLen) out[o++] = triplet & 0xff;
+  }
+  return out;
+}
+
 export function utf8ToBytes(str: string): Uint8Array {
   // React Native provides TextEncoder in modern engines (Hermes).
   return new TextEncoder().encode(str);

@@ -67,6 +67,13 @@ export function TransactionsScreen() {
           style={{ flex: 1 }}
         />
       </View>
+      <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}>
+        <Button
+          title="📷 Escanear ticket (OCR)"
+          variant="secondary"
+          onPress={() => navigation.navigate('ReceiptScan')}
+        />
+      </View>
     </View>
   );
 }

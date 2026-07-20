@@ -5,6 +5,7 @@ import { colors } from '../theme/theme';
 import { AppTabs } from './AppTabs';
 import { AddTransactionScreen } from '../screens/transactions/AddTransactionScreen';
 import { AddTransferScreen } from '../screens/transactions/AddTransferScreen';
+import { ReceiptScanScreen } from '../screens/transactions/ReceiptScanScreen';
 import { AccountsScreen } from '../screens/accounts/AccountsScreen';
 import { AccountFormScreen } from '../screens/accounts/AccountFormScreen';
 import { AccountDetailScreen } from '../screens/accounts/AccountDetailScreen';
@@ -41,6 +42,11 @@ export function MainNavigator() {
         name="AddTransfer"
         component={AddTransferScreen}
         options={{ title: 'Transferencia', presentation: 'modal' }}
+      />
+      <Stack.Screen
+        name="ReceiptScan"
+        component={ReceiptScanScreen}
+        options={{ title: 'Escanear ticket' }}
       />
       <Stack.Screen
         name="Accounts"

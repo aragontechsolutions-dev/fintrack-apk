@@ -18,6 +18,7 @@ export type MainStackParamList = {
   Tabs: NavigatorScreenParams<AppTabParamList>;
   AddTransaction: { transactionId?: string } | undefined;
   AddTransfer: undefined;
+  ReceiptScan: undefined;
   Accounts: undefined;
   AccountForm: { accountId?: string } | undefined;
   AccountDetail: { accountId: string };

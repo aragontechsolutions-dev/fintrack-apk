@@ -37,6 +37,13 @@
         {
           "faceIDPermission": "Permitir a FinTrack usar autenticación biométrica para desbloquear tus datos."
         }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "cameraPermission": "FinTrack usa la cámara para escanear tickets de compra.",
+          "photosPermission": "FinTrack accede a tus fotos para leer tickets de compra."
+        }
       ]
     ],
     "extra": {

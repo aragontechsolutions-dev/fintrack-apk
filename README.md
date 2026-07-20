@@ -5,10 +5,10 @@ Aplicación Android nativa (React Native + Expo) de **finanzas personales**,
 dispositivo. Sin servidores: toda la seguridad recae en el cifrado en reposo y
 el control de acceso local.
 
-> Estado actual: **Etapas 0, 1, 2, 3 y 4 completas** (Fundaciones, Multiusuario +
-> núcleo financiero, Multimoneda + líneas de detalle, Ahorro/Presupuestos/
-> Reportes, y Backups). Falta la Etapa 5 (OCR de tickets). Ver
-> [Roadmap](#roadmap).
+> Estado actual: **Etapas 0–5 completas** (Fundaciones, Multiusuario + núcleo
+> financiero, Multimoneda + líneas de detalle, Ahorro/Presupuestos/Reportes,
+> Backups, y OCR de tickets). Queda la Etapa 6 (endurecimiento + opcionales).
+> Ver [Roadmap](#roadmap).
 
 ---
 
@@ -28,6 +28,9 @@ el control de acceso local.
 - **Detalle de productos por compra**: ítems con descripción, cantidad
   (fraccional) y precio unitario, con cuadre de la suma contra el total del
   movimiento (la diferencia se muestra como impuesto/descuento/ajuste).
+- **OCR de tickets** (on-device, offline): foto → ML Kit → parser → pantalla de
+  **revisión obligatoria** que precarga las líneas; la imagen se guarda cifrada
+  (ver [OCR](#ocr-de-tickets)).
 - **Dashboard**: saldo total por moneda, ingresos/gastos/balance del mes.
 - **Ahorro**: metas y sobres con progreso, aportes y proyección de cumplimiento.
 - **Presupuestos**: límite mensual por categoría con gasto consumido y alerta de
@@ -108,6 +111,31 @@ base (DEK) al ir a segundo plano y una tarea en background no puede descifrarla:
 background es un refuerzo best-effort que además notifica si hace ≥3 días que no
 hay backup. Antes de cualquier restauración se toma un snapshot de seguridad.
 
+### OCR de tickets
+
+Pipeline 100% on-device (offline, gratis) con **Google ML Kit Text Recognition
+v2** (`@react-native-ml-kit/text-recognition`) + `expo-image-picker`:
+
+1. **Captura** foto (cámara o galería), con calidad reducida.
+2. **OCR** → texto + geometría de líneas (`src/ocr/recognize.ts`).
+3. **Parser** heurístico (`src/ocr/parseReceipt.ts`, puro y con tests): agrupa
+   descripción + cantidad + precio, detecta patrones `N x precio`, cantidad
+   inicial, excluye metadatos (SUBTOTAL/IVA/RUT/…), detecta el TOTAL y asigna un
+   **nivel de confianza** a cada línea.
+4. **Pantalla de revisión obligatoria** (`ReceiptScanScreen`): muestra la foto y
+   precarga el **editor de líneas** para corregir; resalta cuántas líneas son de
+   baja confianza y compara el subtotal con el total.
+5. Al confirmar, guarda el movimiento con `source='ocr'` y la **imagen cifrada**
+   con la DEK (AES-256-GCM, `src/receipts/receiptStore.ts`) para poder
+   reprocesarla sin dejar copia en claro en reposo.
+
+**Límites reales (de la investigación):** la precisión de líneas ronda ~90-93%
+en supermercado limpio y baja en tickets térmicos degradados; por eso la
+**corrección manual es obligatoria** y ninguna línea se guarda sin confirmación.
+El parser es un punto de partida razonable: **ajustalo probando con tickets
+uruguayos reales en tu dispositivo** (los tests cubren un caso representativo).
+Requiere **development build** y **Google Play Services**.
+
 ---
 
 ## Estructura del proyecto
@@ -116,6 +144,8 @@ hay backup. Antes de cualquier restauración se toma un snapshot de seguridad.
 src/
   crypto/        Argon2id, AES-256-GCM, key-wrapping, random, secure store
   backup/        Export/import portable, snapshots locales, tarea background
+  ocr/           Reconocimiento ML Kit + parser de tickets
+  receipts/      Almacenamiento cifrado de imágenes de tickets
   db/            Esquema Drizzle, cliente SQLCipher, migraciones, seeds
   money/         Tipo Money (centavos), formateo/parseo, tasas de cambio (fx)
   auth/          Auth store (JSON), servicio de usuarios, AuthContext (sesión)
@@ -215,7 +245,7 @@ npx expo start --dev-client
 | 2 | Multimoneda + líneas de detalle por compra (manual) | ✅ |
 | 3 | Planes de ahorro + presupuestos + reportes/gráficos | ✅ |
 | 4 | Backups manual + automático cifrados y versionados | ✅ |
-| 5 | OCR de tickets (ML Kit on-device) + pantalla de revisión | ⬜ |
+| 5 | OCR de tickets (ML Kit on-device) + pantalla de revisión | ✅ |
 | 6 | Endurecimiento MASVS, tasa BCU/DolarApi opcional, backup a la nube | ⬜ |
 
 La Etapa 5 (OCR de tickets con ML Kit on-device) reutiliza el editor de líneas
