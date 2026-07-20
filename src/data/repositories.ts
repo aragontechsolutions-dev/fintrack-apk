@@ -16,6 +16,7 @@ import {
   SavingsContribution,
   SavingsPlan,
   Transaction,
+  TransactionItem,
   accounts,
   budgets,
   categories,
@@ -375,6 +376,65 @@ export function createRepositories(db: Database, userId: string) {
         .update(transactions)
         .set({ ...input, updatedAt: now() })
         .where(and(eq(transactions.userId, userId), eq(transactions.id, id)));
+    },
+
+    async listItems(transactionId: string): Promise<TransactionItem[]> {
+      return db
+        .select()
+        .from(transactionItems)
+        .where(
+          and(
+            eq(transactionItems.userId, userId),
+            eq(transactionItems.transactionId, transactionId),
+          ),
+        )
+        .orderBy(asc(transactionItems.createdAt));
+    },
+
+    /**
+     * Replace all line items of a transaction (delete + insert) and update its
+     * `hasLineItems` flag. Pass an empty array to clear the detail.
+     */
+    async replaceItems(
+      transactionId: string,
+      items: {
+        description: string;
+        quantity: number;
+        unitPriceMinor: number;
+        lineTotalMinor: number;
+        categoryId?: string | null;
+        ocrConfidence?: number | null;
+      }[],
+    ): Promise<void> {
+      await db
+        .delete(transactionItems)
+        .where(
+          and(
+            eq(transactionItems.userId, userId),
+            eq(transactionItems.transactionId, transactionId),
+          ),
+        );
+      if (items.length > 0) {
+        await db.insert(transactionItems).values(
+          items.map((it) => ({
+            id: randomId(),
+            userId,
+            transactionId,
+            description: it.description,
+            quantity: it.quantity,
+            unitPriceMinor: it.unitPriceMinor,
+            lineTotalMinor: it.lineTotalMinor,
+            categoryId: it.categoryId ?? null,
+            ocrConfidence: it.ocrConfidence ?? null,
+          })),
+        );
+      }
+      await db
+        .update(transactions)
+        .set({ hasLineItems: items.length > 0, updatedAt: now() })
+        .where(
+          and(eq(transactions.userId, userId), eq(transactions.id, transactionId)),
+        );
     },
 
     /** Delete a transaction and its line items (and paired transfer leg). */

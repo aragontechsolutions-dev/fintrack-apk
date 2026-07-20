@@ -161,3 +161,23 @@ export function parseToMinor(input: string, currency: CurrencyCode): number {
 export function sumMinor(amounts: number[]): number {
   return amounts.reduce((acc, n) => acc + n, 0);
 }
+
+/**
+ * Line total for a purchase item: quantity (may be fractional, e.g. 0.5 kg)
+ * times unit price in minor units, rounded half-up to whole minor units.
+ */
+export function lineTotalMinor(quantity: number, unitPriceMinor: number): number {
+  const raw = quantity * unitPriceMinor;
+  // Math.round is half-up for positive values, which is what we want here.
+  return Math.round(raw);
+}
+
+/** Parse a quantity string ("1", "0.5", "0,5") into a positive number. */
+export function parseQuantity(input: string): number {
+  const normalized = input.trim().replace(',', '.');
+  const value = Number(normalized);
+  if (!Number.isFinite(value) || value <= 0) {
+    throw new Error(`Cantidad inválida: "${input}"`);
+  }
+  return value;
+}

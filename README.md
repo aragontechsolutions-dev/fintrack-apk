@@ -5,9 +5,10 @@ Aplicación Android nativa (React Native + Expo) de **finanzas personales**,
 dispositivo. Sin servidores: toda la seguridad recae en el cifrado en reposo y
 el control de acceso local.
 
-> Estado actual: **Etapas 0, 1, 3 y 4 completas** (Fundaciones, Multiusuario +
-> núcleo financiero, Ahorro/Presupuestos/Reportes, y Backups), más la base de
-> multimoneda (Etapa 2 parcial). Ver [Roadmap](#roadmap).
+> Estado actual: **Etapas 0, 1, 2, 3 y 4 completas** (Fundaciones, Multiusuario +
+> núcleo financiero, Multimoneda + líneas de detalle, Ahorro/Presupuestos/
+> Reportes, y Backups). Falta la Etapa 5 (OCR de tickets). Ver
+> [Roadmap](#roadmap).
 
 ---
 
@@ -24,6 +25,9 @@ el control de acceso local.
 - **Multimoneda**: cada movimiento guarda su moneda, la tasa de cambio usada y
   el equivalente en la moneda base (por defecto UYU). Dinero siempre en
   **enteros de centavos** (nunca float).
+- **Detalle de productos por compra**: ítems con descripción, cantidad
+  (fraccional) y precio unitario, con cuadre de la suma contra el total del
+  movimiento (la diferencia se muestra como impuesto/descuento/ajuste).
 - **Dashboard**: saldo total por moneda, ingresos/gastos/balance del mes.
 - **Ahorro**: metas y sobres con progreso, aportes y proyección de cumplimiento.
 - **Presupuestos**: límite mensual por categoría con gasto consumido y alerta de
@@ -208,14 +212,15 @@ npx expo start --dev-client
 |---|---|---|
 | 0 | Fundaciones: dev build, SQLCipher+Drizzle, cripto (Argon2id/AES-GCM/key-wrapping) | ✅ |
 | 1 | Multiusuario local, núcleo financiero (cuentas, categorías, transacciones, transferencias, saldos), auto-logout, biometría | ✅ |
-| 2 | Multimoneda + líneas de detalle por compra | 🟡 (multimoneda base lista; falta detalle de ítems y OCR) |
+| 2 | Multimoneda + líneas de detalle por compra (manual) | ✅ |
 | 3 | Planes de ahorro + presupuestos + reportes/gráficos | ✅ |
 | 4 | Backups manual + automático cifrados y versionados | ✅ |
 | 5 | OCR de tickets (ML Kit on-device) + pantalla de revisión | ⬜ |
 | 6 | Endurecimiento MASVS, tasa BCU/DolarApi opcional, backup a la nube | ⬜ |
 
-Las tablas de líneas de detalle por compra **ya existen en el esquema**
-(`src/db/schema.ts`), listas para construir sus pantallas (Etapa 2).
+La Etapa 5 (OCR de tickets con ML Kit on-device) reutiliza el editor de líneas
+de detalle (`src/components/LineItemsEditor.tsx`): el OCR sólo precarga las filas
+y el usuario revisa/corrige antes de confirmar.
 
 Los reportes usan gráficos basados en Views (`src/components/charts.tsx`) para
 no arrastrar dependencias nativas. Si más adelante se necesitan gráficos

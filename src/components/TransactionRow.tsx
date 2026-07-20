@@ -30,6 +30,7 @@ export function TransactionRow({ txn, subtitle, onPress }: Props) {
     <Pressable style={styles.row} onPress={onPress}>
       <View style={{ flex: 1 }}>
         <Text style={styles.title} numberOfLines={1}>
+          {txn.hasLineItems ? '🧾 ' : ''}
           {txn.payee || subtitle || (type.startsWith('transfer') ? 'Transferencia' : 'Movimiento')}
         </Text>
         <Text style={styles.sub}>
