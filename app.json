@@ -44,6 +44,14 @@
           "cameraPermission": "FinTrack usa la cámara para escanear tickets de compra.",
           "photosPermission": "FinTrack accede a tus fotos para leer tickets de compra."
         }
+      ],
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "kotlinVersion": "1.9.25"
+          }
+        }
       ]
     ],
     "extra": {
