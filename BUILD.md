@@ -174,6 +174,8 @@ un keystore (ver docs de Android/Expo). Para probar rápido alcanza `assembleDeb
 | OCR devuelve vacío o error de ML Kit | Usá dispositivo/emulador **con Google Play Services**. |
 | La app no respalda en background a horario exacto | Es esperado: Android (WorkManager) es best-effort. El backup oportunista al abrir la app es el camino confiable. |
 | `2 files found with path 'lib/arm64-v8a/libcrypto.so'` | Choque de OpenSSL entre librerías. Ya resuelto (el cifrado usa `@noble/ciphers` en JS puro, sin OpenSSL nativo). Si aparece con un build viejo: `npx expo prebuild --clean` y recompilá. |
+| `Compose Compiler requires Kotlin version 1.9.25 but ... 1.9.24` | Ya resuelto: `expo-build-properties` fija `android.kotlinVersion=1.9.25` en `app.json`. Si aparece, `npx expo prebuild --clean` y recompilá. |
+| Build se rompe tras `npm audit fix --force` (Expo saltó a 57, errores de Kotlin 2.2, etc.) | **Nunca** corras `npm audit fix --force` en este proyecto. Restaurá: `git checkout -- package.json package-lock.json`, borrá `node_modules` y `android`, `npm install`, `npx expo prebuild --clean`. Las 23 "vulnerabilidades" son de herramientas de build, no van en el APK: ignoralas. |
 | `expo-doctor` marca versiones | Corré `npx expo install --check` y aceptá los ajustes. |
 | Cambios en JS no se reflejan | Recargá Metro (tecla `r`) o reiniciá `npx expo start --dev-client -c`. |
 
