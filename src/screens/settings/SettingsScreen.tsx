@@ -8,6 +8,7 @@ import { getUser } from '../../auth/authStore';
 import { isBiometricAvailable } from '../../crypto/secureStore';
 import { disableBiometrics, enableBiometrics } from '../../auth/userService';
 import { Card, Subtle } from '../../components/ui';
+import { AtsCredit } from '../../components/AtsCredit';
 import { Picker } from '../../components/Picker';
 import { MainStackParamList } from '../../navigation/types';
 import { colors, font, spacing } from '../../theme/theme';
@@ -179,6 +180,8 @@ export function SettingsScreen() {
         olvidás tu contraseña no hay forma de recuperarlos. Hacé backups desde
         Gestión → Backups.
       </Subtle>
+
+      <AtsCredit />
     </ScrollView>
   );
 }

@@ -10,6 +10,7 @@ import {
   Heading,
   Subtle,
 } from '../../components/ui';
+import { AtsCredit } from '../../components/AtsCredit';
 import { CurrencyPicker } from '../../components/CurrencyPicker';
 import { CurrencyCode } from '../../money/currency';
 
@@ -78,6 +79,8 @@ export function OnboardingScreen() {
           style={{ marginTop: 8 }}
         />
       </Card>
+
+      <AtsCredit />
     </ScrollView>
   );
 }

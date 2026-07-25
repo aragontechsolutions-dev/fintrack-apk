@@ -6,6 +6,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { getProfiles } from '../../auth/userService';
 import { AuthUserRecord } from '../../auth/authStore';
 import { Subtle } from '../../components/ui';
+import { AtsCredit } from '../../components/AtsCredit';
 import { colors, font, radius, spacing } from '../../theme/theme';
 import { AuthStackParamList } from '../../navigation/types';
 
@@ -50,6 +51,7 @@ export function ProfileSelectScreen({ navigation }: Props) {
             </View>
           </Pressable>
         )}
+        ListFooterComponent={<AtsCredit />}
       />
     </View>
   );
