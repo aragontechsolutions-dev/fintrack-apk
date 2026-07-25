@@ -3,9 +3,13 @@ import { View } from 'react-native';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
+import * as SplashScreen from 'expo-splash-screen';
 
 import { AuthProvider, useAuth } from './src/auth/AuthContext';
 import { RootNavigator } from './src/navigation/RootNavigator';
+
+// Keep the native splash visible until the app has decided its first screen.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 /**
  * Wraps the app so any touch resets the inactivity auto-logout timer. The

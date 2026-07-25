@@ -13,7 +13,7 @@
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#FFFFFF"
+        "backgroundColor": "#12735A"
       },
       "permissions": [
         "USE_BIOMETRIC",
@@ -48,6 +48,15 @@
         {
           "cameraPermission": "FinTrack usa la cámara para escanear tickets de compra.",
           "photosPermission": "FinTrack accede a tus fotos para leer tickets de compra."
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0E5240",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 220,
+          "resizeMode": "contain"
         }
       ],
       [
