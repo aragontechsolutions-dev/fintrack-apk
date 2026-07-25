@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1F8A6D"/>
+      <stop offset="1" stop-color="#0E5240"/>
+    </linearGradient>
+    <linearGradient id="leaf1" x1="556" y1="352" x2="648" y2="414" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#8FF0CB"/>
+      <stop offset="1" stop-color="#43C78E"/>
+    </linearGradient>
+    <linearGradient id="leaf2" x1="742" y1="348" x2="648" y2="414" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#B9F6DE"/>
+      <stop offset="1" stop-color="#6BE3AE"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <g transform="translate(512 512) scale(0.94) translate(-548 -574)">
+    <path d="M512 662 C 512 560 540 470 648 408" fill="none" stroke="#FFFFFF" stroke-width="46" stroke-linecap="round"/>
+    <path d="M648 414 C 604 430 556 404 556 352 C 610 352 648 382 648 414 Z" fill="url(#leaf1)"/>
+    <path d="M648 414 C 692 430 742 402 742 348 C 686 348 648 380 648 414 Z" fill="url(#leaf2)"/>
+    <rect x="372" y="742" width="280" height="54" rx="27" fill="#FFFFFF"/>
+    <rect x="372" y="686" width="280" height="54" rx="27" fill="#EAFBF4"/>
+    <rect x="372" y="630" width="280" height="54" rx="27" fill="#FFFFFF"/>
+    <rect x="486" y="763" width="52" height="12" rx="6" fill="#CFEFE2"/>
+    <rect x="486" y="707" width="52" height="12" rx="6" fill="#CFEFE2"/>
+    <rect x="486" y="651" width="52" height="12" rx="6" fill="#CFEFE2"/>
+  </g>
+</svg>
