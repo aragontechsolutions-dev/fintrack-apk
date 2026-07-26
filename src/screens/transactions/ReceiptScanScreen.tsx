@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 
-import { useSession } from '../../auth/AuthContext';
+import { useAuth, useSession } from '../../auth/AuthContext';
 import { Button, Card, ErrorText, Field, Subtle } from '../../components/ui';
 import { Picker, PickerOption } from '../../components/Picker';
 import {
@@ -28,6 +28,7 @@ type Phase = 'capture' | 'processing' | 'review';
 export function ReceiptScanScreen() {
   const navigation = useNavigation();
   const { session, repos } = useSession();
+  const { runWithoutAutoLock } = useAuth();
   const base = session.baseCurrency;
 
   const [phase, setPhase] = useState<Phase>('capture');
@@ -65,7 +66,9 @@ export function ReceiptScanScreen() {
     setError(null);
     let uri: string | null;
     try {
-      uri = await getUri();
+      // The camera/gallery sends the app to background momentarily; suspend the
+      // auto-lock so the session survives until the photo is picked.
+      uri = await runWithoutAutoLock(getUri);
     } catch (e) {
       return setError(e instanceof Error ? e.message : 'No se pudo abrir la cámara.');
     }

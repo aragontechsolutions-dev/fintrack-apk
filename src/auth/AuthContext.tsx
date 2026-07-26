@@ -57,6 +57,12 @@ interface AuthContextValue {
   logout: () => void;
   /** Reset the inactivity timer; call on any user interaction. */
   touch: () => void;
+  /**
+   * Run an action that legitimately sends the app to background (camera,
+   * gallery, document picker, share sheet) WITHOUT triggering the auto-lock.
+   * Re-arms the inactivity timer when it finishes.
+   */
+  runWithoutAutoLock: <T>(fn: () => Promise<T>) => Promise<T>;
   refreshFirstRun: () => Promise<void>;
 }
 
@@ -71,6 +77,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const inactivityTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const autoLogoutSeconds = useRef(DEFAULT_AUTO_LOGOUT_SECONDS);
+  // >0 while an intentional external activity (camera/gallery/share/picker) is
+  // running, so the background transition it causes does not lock the app.
+  const lockSuspended = useRef(0);
 
   const doLogout = useCallback(() => {
     if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
@@ -110,15 +119,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [session]);
 
-  // Lock when the app goes to background; (re)arm inactivity timer on start.
+  // Lock when the app goes to background — unless we're in the middle of an
+  // intentional external activity (camera, gallery, share, file picker).
   useEffect(() => {
     const sub = AppState.addEventListener('change', (state: AppStateStatus) => {
-      if (state === 'background' && session) {
+      if (state === 'background' && session && lockSuspended.current === 0) {
         doLogout();
       }
     });
     return () => sub.remove();
   }, [session, doLogout]);
+
+  const runWithoutAutoLock = useCallback(
+    async <T,>(fn: () => Promise<T>): Promise<T> => {
+      lockSuspended.current += 1;
+      if (inactivityTimer.current) clearTimeout(inactivityTimer.current);
+      try {
+        return await fn();
+      } finally {
+        lockSuspended.current = Math.max(0, lockSuspended.current - 1);
+        // Re-arm the inactivity timer once we're back in the app.
+        touch();
+      }
+    },
+    [touch],
+  );
 
   // Arm the inactivity timer whenever a session begins.
   useEffect(() => {
@@ -231,6 +256,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     deleteMyProfile,
     logout: doLogout,
     touch,
+    runWithoutAutoLock,
     refreshFirstRun,
   };
 

@@ -24,7 +24,7 @@ function formatWhen(ms: number | null): string {
 
 export function BackupScreen() {
   const { session } = useSession();
-  const { logout } = useAuth();
+  const { logout, runWithoutAutoLock } = useAuth();
 
   const [meta, setMeta] = useState<BackupMeta | null>(null);
   const [snapshots, setSnapshots] = useState<SnapshotInfo[]>([]);
@@ -54,7 +54,8 @@ export function BackupScreen() {
     setBusy('export');
     try {
       const { uri } = await exportUserBackup(getDatabase(), session.userId, session.name, exportPass);
-      await shareBackup(uri);
+      // The share sheet backgrounds the app; keep the session alive.
+      await runWithoutAutoLock(() => shareBackup(uri));
       setExportPass('');
       setExportPass2('');
     } catch (e) {
@@ -66,7 +67,8 @@ export function BackupScreen() {
 
   const onPick = async () => {
     setError(null);
-    const uri = await pickBackupFile();
+    // The document picker backgrounds the app; keep the session alive.
+    const uri = await runWithoutAutoLock(() => pickBackupFile());
     if (uri) setPickedUri(uri);
   };
 
